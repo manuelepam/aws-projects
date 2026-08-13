@@ -1,0 +1,9 @@
+output "stream_name" { value = aws_kinesis_stream.stock_market.name }
+output "raw_bucket" { value = aws_s3_bucket.raw.id }
+output "cleaned_table" { value = aws_dynamodb_table.cleaned.name }
+output "producer_function" { value = aws_lambda_function.producer.function_name }
+output "processor_function" { value = aws_lambda_function.processor.function_name }
+output "alert_topic_arn" { value = aws_sns_topic.anomalies.arn }
+output "glue_database" { value = aws_glue_catalog_database.analytics.name }
+output "market_open_schedule" { value = aws_scheduler_schedule.market_open.arn }
+output "market_hours_schedule" { value = aws_scheduler_schedule.market_hours.arn }

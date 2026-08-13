@@ -1,0 +1,9 @@
+.terraform/
+*.tfstate*
+*.tfplan
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+.venv/
+*.zip
+.env
