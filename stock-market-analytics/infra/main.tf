@@ -15,7 +15,8 @@ resource "aws_kinesis_stream" "stock_market" {
 }
 
 resource "aws_s3_bucket" "raw" {
-  bucket = "stock-market-raw-data-8f3c2a"
+  bucket        = "stock-market-raw-data-8f3c2a"
+  force_destroy = var.allow_data_deletion
 }
 
 resource "aws_s3_bucket_public_access_block" "raw" {

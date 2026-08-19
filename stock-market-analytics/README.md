@@ -132,6 +132,27 @@ The partition-filtered latest-price query returned AAPL, AMZN and MSFT in 482
 ms while scanning 1.24 KB. The same unfiltered query took 2 minutes 25 seconds,
 demonstrating why partition pruning matters even for a small dataset.
 
+The pre-teardown screenshot checklist and portfolio evidence are documented in
+[`docs/project-evidence.md`](docs/project-evidence.md).
+
 ## Security note
 
 The local `terraform-admin` access key has broad permissions for this personal sandbox. Rotate or deactivate it when it is no longer needed. For production, prefer short-lived IAM Identity Center credentials, remote encrypted Terraform state with locking, narrowly scoped roles, deletion protection, and CI/CD-based plans and applies.
+
+## Controlled teardown
+
+The raw-data bucket is protected from deletion while it contains objects. The
+`allow_data_deletion` variable defaults to `false`; it must be set explicitly
+before a complete teardown. This makes destructive intent visible in both the
+Terraform plan and command history.
+
+```bash
+terraform -chdir=infra plan -var='allow_data_deletion=true' -out=allow-destroy.tfplan
+terraform -chdir=infra apply allow-destroy.tfplan
+terraform -chdir=infra plan -destroy -var='allow_data_deletion=true' -out=destroy.tfplan
+terraform -chdir=infra apply destroy.tfplan
+```
+
+The final apply permanently deletes the S3 archive, DynamoDB records and the
+remaining project infrastructure. Back up any data that must be retained
+before running it.

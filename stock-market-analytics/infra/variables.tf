@@ -15,3 +15,9 @@ variable "pipeline_enabled" {
   type        = bool
   default     = false
 }
+
+variable "allow_data_deletion" {
+  description = "Allow Terraform to delete objects from the raw-data bucket during teardown."
+  type        = bool
+  default     = false
+}
