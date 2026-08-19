@@ -4,7 +4,7 @@ These screenshots were captured before destroying the AWS resources and are
 stored in [`screenshots`](screenshots). Together they document the deployed
 architecture, successful processing, observability, analytics and IaC checks.
 
-Do not include access keys, secret values, API keys, email addresses, terminal
+This does not include access keys, secret values, API keys, email addresses, terminal
 credential files, or browser password-manager popups. The AWS account ID is not
 a credential, but it may be redacted for a public portfolio.
 
