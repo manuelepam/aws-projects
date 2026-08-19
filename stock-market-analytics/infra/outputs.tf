@@ -10,3 +10,5 @@ output "market_hours_schedule" { value = aws_scheduler_schedule.market_hours.arn
 output "operations_topic_arn" { value = aws_sns_topic.operations.arn }
 output "operations_dashboard" { value = aws_cloudwatch_dashboard.operations.dashboard_name }
 output "pipeline_enabled" { value = var.pipeline_enabled }
+output "athena_workgroup" { value = aws_athena_workgroup.analytics.name }
+output "athena_database" { value = aws_glue_catalog_database.analytics.name }

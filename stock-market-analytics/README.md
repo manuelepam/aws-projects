@@ -67,6 +67,7 @@ Never commit `.tfstate`, `.tfplan`, generated ZIP files, `.env` files, or AWS cr
 - Lambda CloudWatch log groups
 - Four CloudWatch operational alarms and an operations dashboard
 - Separate SNS email notifications for infrastructure failures
+- Athena workgroup with four saved analytical queries and a per-query scan limit
 
 ## Operational monitoring
 
@@ -99,6 +100,37 @@ terraform -chdir=infra apply disable.tfplan
 
 The legacy EventBridge rule is intentionally excluded from this switch and
 remains disabled.
+
+## Historical analytics
+
+Athena queries the JSON archive through the projected Glue table, so no crawler
+is required. The `stock-market-analytics` workgroup forces encrypted results to
+the existing raw-data bucket under `athena-results/`, limits each query to 100
+MB scanned, publishes workgroup metrics to CloudWatch, and expires result files
+after seven days.
+
+Terraform creates four saved queries scoped to the current day's projected
+partitions, avoiding a scan of every possible partition in the projection
+range:
+
+- Latest stock price by symbol
+- Average, minimum and maximum price by symbol
+- Largest percentage movements
+- Records processed per hour
+
+In the Athena console, select the `stock-market-analytics` workgroup and the
+`stock_market_analytics` database before running a saved query. Athena charges
+by data scanned, so use partition filters for larger datasets even with the
+workgroup cutoff.
+
+## Verified outcome
+
+The pipeline was validated end to end by invoking the producer, observing the
+record pass through Kinesis and the processor, confirming S3 and DynamoDB
+activity on the CloudWatch dashboard, and querying the archive with Athena.
+The partition-filtered latest-price query returned AAPL, AMZN and MSFT in 482
+ms while scanning 1.24 KB. The same unfiltered query took 2 minutes 25 seconds,
+demonstrating why partition pruning matters even for a small dataset.
 
 ## Security note
 
