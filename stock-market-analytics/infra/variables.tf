@@ -9,3 +9,9 @@ variable "alert_email" {
   type        = string
   default     = "manuel.epam.etame+aws@gmail.com"
 }
+
+variable "pipeline_enabled" {
+  description = "Whether the producer schedules and Kinesis processor trigger are enabled."
+  type        = bool
+  default     = false
+}

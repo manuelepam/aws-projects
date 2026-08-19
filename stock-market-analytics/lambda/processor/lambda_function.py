@@ -1,11 +1,10 @@
 import base64
 import json
 import os
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal
 
 import boto3
-
 
 ANOMALY_THRESHOLD_PERCENT = 3.0
 s3 = boto3.client("s3")
@@ -17,7 +16,7 @@ SNS_TOPIC_ARN = os.environ["SNS_TOPIC_ARN"]
 
 
 def archive_raw_event(raw_event, sequence_number):
-    ingested_time = datetime.fromisoformat(raw_event["ingested_at"].replace("Z", "+00:00"))
+    ingested_time = datetime.fromisoformat(raw_event["ingested_at"])
     symbol = raw_event["symbol"].upper()
     object_key = (
         f"raw/year={ingested_time:%Y}/month={ingested_time:%m}/"
@@ -55,12 +54,14 @@ def clean_stock_event(raw_event):
         "previous_close": float(quote["pc"]),
         "price_change": float(quote.get("d", 0)),
         "percent_change": percent_change,
-        "market_timestamp": datetime.fromtimestamp(int(quote["t"]), tz=timezone.utc).isoformat(),
+        "market_timestamp": datetime.fromtimestamp(int(quote["t"]), tz=UTC).isoformat(),
         "provider": raw_event.get("provider", "unknown"),
         "is_anomaly": is_anomaly,
     }
     if is_anomaly:
-        cleaned_event["anomaly_reason"] = f"Price moved {percent_change:.2f}% from the previous close"
+        cleaned_event["anomaly_reason"] = (
+            f"Price moved {percent_change:.2f}% from the previous close"
+        )
     return cleaned_event
 
 
@@ -94,5 +95,13 @@ def lambda_handler(event, context):
         processed_records.append(cleaned_event)
         if cleaned_event["is_anomaly"]:
             publish_anomaly_alert(cleaned_event)
-        print(json.dumps({"message": "Stock event stored", "s3_object_key": s3_object_key, "record": cleaned_event}))
+        print(
+            json.dumps(
+                {
+                    "message": "Stock event stored",
+                    "s3_object_key": s3_object_key,
+                    "record": cleaned_event,
+                }
+            )
+        )
     return {"statusCode": 200, "processedRecords": len(processed_records)}

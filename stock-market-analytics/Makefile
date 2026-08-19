@@ -8,7 +8,7 @@ test:
 	.venv/bin/pytest -q
 
 lint:
-	.venv/bin/ruff check src producer tests
+	.venv/bin/ruff check lambda producer tests
 
 tf-init:
 	terraform -chdir=infra init
@@ -22,4 +22,3 @@ plan:
 
 destroy:
 	terraform -chdir=infra destroy
-

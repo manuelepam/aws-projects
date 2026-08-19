@@ -264,11 +264,6 @@ resource "aws_lambda_function" "producer" {
     }
   }
 
-  lifecycle {
-    # Adoption safety: do not redeploy code during the initial import. Remove
-    # this after the first no-surprises plan when Terraform should deploy code.
-    ignore_changes = [filename, source_code_hash]
-  }
 }
 
 resource "aws_lambda_function" "processor" {
@@ -290,19 +285,16 @@ resource "aws_lambda_function" "processor" {
     }
   }
 
-  lifecycle {
-    ignore_changes = [filename, source_code_hash]
-  }
 }
 
 resource "aws_cloudwatch_log_group" "producer" {
   name              = "/aws/lambda/stock-data-producer"
-  retention_in_days = 0
+  retention_in_days = 14
 }
 
 resource "aws_cloudwatch_log_group" "processor" {
   name              = "/aws/lambda/stock-data-processor"
-  retention_in_days = 0
+  retention_in_days = 14
 }
 
 resource "aws_lambda_event_source_mapping" "stock_market" {
@@ -310,7 +302,7 @@ resource "aws_lambda_event_source_mapping" "stock_market" {
   function_name     = aws_lambda_function.processor.arn
   starting_position = "LATEST"
   batch_size        = 100
-  enabled           = true
+  enabled           = var.pipeline_enabled
 
   lifecycle {
     # AWS returns an empty metrics block that provider v5 cannot represent.
@@ -443,7 +435,7 @@ resource "aws_iam_role_policy_attachment" "scheduler_invoke" {
 resource "aws_scheduler_schedule" "market_open" {
   name                         = "stock-data-producer-market-ope"
   group_name                   = "default"
-  state                        = "ENABLED"
+  state                        = var.pipeline_enabled ? "ENABLED" : "DISABLED"
   schedule_expression          = "cron(30/5 9 ? * MON-FRI *)"
   schedule_expression_timezone = "America/New_York"
 
@@ -464,7 +456,7 @@ resource "aws_scheduler_schedule" "market_open" {
 resource "aws_scheduler_schedule" "market_hours" {
   name                         = "stock-data-producer-market-hours"
   group_name                   = "default"
-  state                        = "ENABLED"
+  state                        = var.pipeline_enabled ? "ENABLED" : "DISABLED"
   schedule_expression          = "cron(0/5 10-15 ? * MON-FRI *)"
   schedule_expression_timezone = "America/New_York"
 

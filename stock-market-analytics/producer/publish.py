@@ -29,7 +29,9 @@ def alpha_vantage_quote(symbol: str, api_key: str) -> dict:
     query = urllib.parse.urlencode(
         {"function": "GLOBAL_QUOTE", "symbol": symbol, "apikey": api_key}
     )
-    with urllib.request.urlopen(f"https://www.alphavantage.co/query?{query}", timeout=15) as response:
+    with urllib.request.urlopen(
+        f"https://www.alphavantage.co/query?{query}", timeout=15
+    ) as response:
         quote = json.load(response).get("Global Quote", {})
     if not quote.get("05. price"):
         raise RuntimeError("Alpha Vantage returned no quote; check the key or rate limit")

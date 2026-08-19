@@ -30,7 +30,7 @@ Terraform in [`infra`](infra) manages the existing live resources in account `43
 
 The Finnhub secret container is managed, but its secret value is deliberately excluded from Terraform so the API key is not written into Terraform state.
 
-The Lambda source copied from the deployed functions is stored under [`lambda`](lambda). During initial adoption, Lambda code changes are ignored to guarantee that importing cannot overwrite the working deployment. Remove the `ignore_changes` entries only when Terraform should become the Lambda deployment mechanism.
+The Lambda deployment source is stored under [`lambda`](lambda). Terraform packages these files and uses their source hashes to deploy code changes. The processor tests import the same module that Terraform packages, so the tested implementation and deployed implementation cannot silently diverge.
 
 ## Safe workflow
 
@@ -65,6 +65,40 @@ Never commit `.tfstate`, `.tfplan`, generated ZIP files, `.env` files, or AWS cr
 - Two EventBridge Scheduler schedules
 - Disabled legacy five-minute EventBridge rule
 - Lambda CloudWatch log groups
+- Four CloudWatch operational alarms and an operations dashboard
+- Separate SNS email notifications for infrastructure failures
+
+## Operational monitoring
+
+The `stock-market-operations` CloudWatch dashboard shows Lambda invocations,
+errors and duration, Kinesis throughput and consumer lag, Scheduler delivery,
+and DynamoDB activity. Four alarms notify the separate
+`stock-market-operations` SNS topic when either Lambda fails, the Kinesis
+consumer is more than five minutes behind, or Scheduler cannot invoke its
+target. Missing metrics are treated as healthy while the schedules and event
+source mapping are deliberately disabled.
+
+## Pipeline switch
+
+The `pipeline_enabled` variable controls the two market-hours schedules and
+the Kinesis-to-processor event source mapping together. It defaults to
+`false`, keeping automatic ingestion disabled unless it is deliberately
+enabled for a test:
+
+```bash
+terraform -chdir=infra plan -var='pipeline_enabled=true' -out=enable.tfplan
+terraform -chdir=infra apply enable.tfplan
+```
+
+Return to the safe default after testing:
+
+```bash
+terraform -chdir=infra plan -out=disable.tfplan
+terraform -chdir=infra apply disable.tfplan
+```
+
+The legacy EventBridge rule is intentionally excluded from this switch and
+remains disabled.
 
 ## Security note
 

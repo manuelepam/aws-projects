@@ -2,10 +2,9 @@ import json
 import os
 import urllib.parse
 import urllib.request
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import boto3
-
 
 STREAM_NAME = os.environ["STREAM_NAME"]
 SECRET_ID = os.environ["SECRET_ID"]
@@ -50,7 +49,7 @@ def lambda_handler(event, context):
             stock_event = {
                 "symbol": symbol,
                 "provider": "finnhub",
-                "ingested_at": datetime.now(timezone.utc).isoformat(),
+                "ingested_at": datetime.now(UTC).isoformat(),
                 "quote": quote,
             }
             response = kinesis.put_record(
@@ -59,8 +58,23 @@ def lambda_handler(event, context):
                 Data=json.dumps(stock_event).encode("utf-8"),
             )
             sent.append(symbol)
-            print(json.dumps({"message": "Stock event sent", "symbol": symbol, "sequence_number": response["SequenceNumber"]}))
-        except Exception as error:
+            print(
+                json.dumps(
+                    {
+                        "message": "Stock event sent",
+                        "symbol": symbol,
+                        "sequence_number": response["SequenceNumber"],
+                    }
+                )
+            )
+        except Exception as error:  # noqa: BLE001 - continue processing the remaining symbols.
             failed.append({"symbol": symbol, "error": str(error)})
-            print(json.dumps({"message": "Failed to send stock event", "symbol": symbol, "error": str(error)}))
-    return {"statusCode": 200 if not failed else 207, "body": json.dumps({"sent": sent, "failed": failed})}
+            print(
+                json.dumps(
+                    {"message": "Failed to send stock event", "symbol": symbol, "error": str(error)}
+                )
+            )
+    return {
+        "statusCode": 200 if not failed else 207,
+        "body": json.dumps({"sent": sent, "failed": failed}),
+    }

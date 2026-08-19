@@ -7,3 +7,6 @@ output "alert_topic_arn" { value = aws_sns_topic.anomalies.arn }
 output "glue_database" { value = aws_glue_catalog_database.analytics.name }
 output "market_open_schedule" { value = aws_scheduler_schedule.market_open.arn }
 output "market_hours_schedule" { value = aws_scheduler_schedule.market_hours.arn }
+output "operations_topic_arn" { value = aws_sns_topic.operations.arn }
+output "operations_dashboard" { value = aws_cloudwatch_dashboard.operations.dashboard_name }
+output "pipeline_enabled" { value = var.pipeline_enabled }
