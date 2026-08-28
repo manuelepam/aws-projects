@@ -1,8 +1,11 @@
 import base64
 import binascii
 import json
+import logging
 
 from src.detector import is_brute_force
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
 
 
 def decode_kinesis_record(record: dict) -> dict:
@@ -24,18 +27,45 @@ def lambda_handler(event: dict, context: object) -> dict:
 
             if is_brute_force(decoded_event):
                 findings.append(decoded_event)
+                logger.warning(
+                    json.dumps(
+                        {
+                            "message": "brute_force_detected",
+                            "finding": decoded_event,
+                        }
+                    )
+                )
         except (
             binascii.Error,
             UnicodeDecodeError,
             json.JSONDecodeError,
             KeyError,
             TypeError,
-        ):
+        ) as error:
             failed_records += 1
             sequence_number = record["kinesis"]["sequenceNumber"]
             batch_item_failures.append(
                 {"itemIdentifier": sequence_number}
             )
+            logger.error(
+                json.dumps(
+                    {
+                        "message": "record_processing_failed",
+                        "sequence_number": sequence_number,
+                        "error_type": type(error).__name__,
+                    }
+                )
+            )
+    logger.info(
+        json.dumps(
+            {
+                "message": "batch_processed",
+                "records_processed": len(records),
+                "records_failed": failed_records,
+                "findings_created": len(findings),
+            }
+        )
+    )
 
     return {
         "records_processed": len(records),

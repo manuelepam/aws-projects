@@ -1,5 +1,6 @@
 import base64
 import json
+import logging
 
 from src.lambda_handler import decode_kinesis_record, lambda_handler
 
@@ -26,7 +27,8 @@ def test_decode_kinesis_record() -> None:
 
     assert decode_kinesis_record(record) == original_event
 
-def test_lambda_handler_processes_mixed_batch() -> None:
+def test_lambda_handler_processes_mixed_batch(caplog) -> None:
+    caplog.set_level(logging.INFO)
     normal_event = {
         "event_type": "LOGIN",
         "authentication_result": "SUCCESS",
@@ -54,7 +56,25 @@ def test_lambda_handler_processes_mixed_batch() -> None:
     assert result["findings_created"] == 1
     assert result["findings"] == [suspicious_event]
 
-def test_lambda_handler_continues_after_malformed_record() -> None:
+    logged_messages = [
+        json.loads(record.message)
+        for record in caplog.records
+    ]
+
+    assert {
+        "message": "brute_force_detected",
+        "finding": suspicious_event,
+    } in logged_messages
+
+    assert {
+        "message": "batch_processed",
+        "records_processed": 2,
+        "records_failed": 0,
+        "findings_created": 1,
+    } in logged_messages
+
+def test_lambda_handler_continues_after_malformed_record(caplog) -> None:
+    caplog.set_level(logging.INFO)
     suspicious_event = {
         "event_type": "LOGIN",
         "authentication_result": "FAILURE",
@@ -84,3 +104,22 @@ def test_lambda_handler_continues_after_malformed_record() -> None:
     assert result["batchItemFailures"] == [
         {"itemIdentifier": "100"}
     ]
+
+    logged_messages = [
+        json.loads(record.message)
+        for record in caplog.records
+    ]
+
+    assert {
+        "message": "record_processing_failed",
+        "sequence_number": "100",
+        "error_type": "Error",
+    } in logged_messages
+
+    assert {
+        "message": "batch_processed",
+        "records_processed": 2,
+        "records_failed": 1,
+        "findings_created": 1,
+    } in logged_messages
+   
