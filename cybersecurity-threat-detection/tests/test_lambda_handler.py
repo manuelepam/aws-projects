@@ -115,7 +115,6 @@ def test_lambda_handler_continues_after_malformed_record(caplog) -> None:
         "sequence_number": "100",
         "error_type": "Error",
     } in logged_messages
-
     assert {
         "message": "batch_processed",
         "records_processed": 2,
