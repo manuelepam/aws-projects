@@ -27,3 +27,8 @@ output "event_source_mapping_uuid" {
   description = "Identifier of the Kinesis-to-Lambda event-source mapping"
   value       = aws_lambda_event_source_mapping.kinesis_to_lambda.uuid
 }
+
+output "security_alert_topic_arn" {
+  description = "ARN of the SNS topic used for security alerts"
+  value       = aws_sns_topic.security_alerts.arn
+}

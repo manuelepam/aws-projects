@@ -2,10 +2,14 @@ import base64
 import binascii
 import json
 import logging
+import os
 
 from src.detector import is_brute_force
+
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
+alert_topic_arn = os.environ.get("ALERT_TOPIC_ARN")
+sns_client = None
 
 
 def decode_kinesis_record(record: dict) -> dict:
@@ -13,6 +17,30 @@ def decode_kinesis_record(record: dict) -> dict:
     decoded_bytes = base64.b64decode(encoded_data, validate=True)
     decoded_text = decoded_bytes.decode("utf-8")
     return json.loads(decoded_text)
+
+
+def publish_security_alert(finding: dict) -> None:
+    if not alert_topic_arn:
+        return
+
+    global sns_client
+
+    if sns_client is None:
+        import boto3
+
+        sns_client = boto3.client("sns")
+
+    sns_client.publish(
+        TopicArn=alert_topic_arn,
+        Subject="Brute-force activity detected",
+        Message=json.dumps(
+            {
+                "finding_type": "BRUTE_FORCE",
+                "finding": finding,
+            },
+            indent=2,
+        ),
+    )
 
 
 def lambda_handler(event: dict, context: object) -> dict:
@@ -35,6 +63,7 @@ def lambda_handler(event: dict, context: object) -> dict:
                         }
                     )
                 )
+                publish_security_alert(decoded_event)
         except (
             binascii.Error,
             UnicodeDecodeError,

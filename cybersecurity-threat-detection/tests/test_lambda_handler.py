@@ -1,7 +1,9 @@
 import base64
 import json
 import logging
+from unittest.mock import Mock
 
+import src.lambda_handler as lambda_module
 from src.lambda_handler import decode_kinesis_record, lambda_handler
 
 
@@ -121,4 +123,51 @@ def test_lambda_handler_continues_after_malformed_record(caplog) -> None:
         "records_failed": 1,
         "findings_created": 1,
     } in logged_messages
+
    
+def test_brute_force_finding_publishes_sns_alert(monkeypatch) -> None:
+    suspicious_event = {
+        "event_type": "LOGIN",
+        "authentication_result": "FAILURE",
+        "failed_attempts_last_5m": 25,
+    }
+
+    topic_arn = (
+        "arn:aws:sns:eu-west-2:123456789012:test-alerts"
+    )
+    mock_sns_client = Mock()
+
+    monkeypatch.setattr(
+        lambda_module,
+        "alert_topic_arn",
+        topic_arn,
+    )
+    monkeypatch.setattr(
+        lambda_module,
+        "sns_client",
+        mock_sns_client,
+    )
+
+    lambda_event = {
+        "Records": [
+            make_kinesis_record(suspicious_event),
+        ]
+    }
+
+    lambda_module.lambda_handler(lambda_event, None)
+
+    mock_sns_client.publish.assert_called_once()
+
+    publish_arguments = (
+        mock_sns_client.publish.call_args.kwargs
+    )
+
+    assert publish_arguments["TopicArn"] == topic_arn
+    assert (
+        publish_arguments["Subject"]
+        == "Brute-force activity detected"
+    )
+    assert json.loads(publish_arguments["Message"]) == {
+        "finding_type": "BRUTE_FORCE",
+        "finding": suspicious_event,
+    }

@@ -145,6 +145,12 @@ resource "aws_iam_role_policy" "lambda_permissions" {
         ]
 
         Resource = "${aws_cloudwatch_log_group.lambda_logs.arn}:*"
+      },
+      {
+        Sid      = "PublishSecurityAlerts"
+        Effect   = "Allow"
+        Action   = "sns:Publish"
+        Resource = aws_sns_topic.security_alerts.arn
       }
     ]
   })
@@ -163,6 +169,12 @@ resource "aws_lambda_function" "threat_detector" {
 
   memory_size = 128
   timeout     = 10
+
+  environment {
+    variables = {
+      ALERT_TOPIC_ARN = aws_sns_topic.security_alerts.arn
+    }
+  }
 
   tags = local.common_tags
 
@@ -184,4 +196,16 @@ resource "aws_lambda_event_source_mapping" "kinesis_to_lambda" {
   enabled    = true
 
   function_response_types = ["ReportBatchItemFailures"]
+}
+
+resource "aws_sns_topic" "security_alerts" {
+  name = "${local.project_name}-${var.environment}-alerts"
+
+  tags = local.common_tags
+}
+
+resource "aws_sns_topic_subscription" "security_alert_email" {
+  topic_arn = aws_sns_topic.security_alerts.arn
+  protocol  = "email"
+  endpoint  = var.alert_email
 }
