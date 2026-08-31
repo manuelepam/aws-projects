@@ -32,3 +32,13 @@ output "security_alert_topic_arn" {
   description = "ARN of the SNS topic used for security alerts"
   value       = aws_sns_topic.security_alerts.arn
 }
+
+output "lambda_errors_alarm_name" {
+  description = "Name of the Lambda errors CloudWatch alarm"
+  value       = aws_cloudwatch_metric_alarm.lambda_errors.alarm_name
+}
+
+output "lambda_throttles_alarm_name" {
+  description = "Name of the Lambda throttles CloudWatch alarm"
+  value       = aws_cloudwatch_metric_alarm.lambda_throttles.alarm_name
+}

@@ -209,3 +209,53 @@ resource "aws_sns_topic_subscription" "security_alert_email" {
   protocol  = "email"
   endpoint  = var.alert_email
 }
+
+resource "aws_cloudwatch_metric_alarm" "lambda_errors" {
+  alarm_name        = "${local.project_name}-${var.environment}-lambda-errors"
+  alarm_description = "Alerts when the threat detection Lambda reports an error"
+
+  namespace   = "AWS/Lambda"
+  metric_name = "Errors"
+  statistic   = "Sum"
+  period      = 60
+
+  evaluation_periods  = 1
+  threshold           = 0
+  comparison_operator = "GreaterThanThreshold"
+  treat_missing_data  = "notBreaching"
+
+  dimensions = {
+    FunctionName = aws_lambda_function.threat_detector.function_name
+  }
+
+  alarm_actions = [
+    aws_sns_topic.security_alerts.arn
+  ]
+
+  tags = local.common_tags
+}
+
+resource "aws_cloudwatch_metric_alarm" "lambda_throttles" {
+  alarm_name        = "${local.project_name}-${var.environment}-lambda-throttles"
+  alarm_description = "Alerts when the threat detection Lambda is throttled"
+
+  namespace   = "AWS/Lambda"
+  metric_name = "Throttles"
+  statistic   = "Sum"
+  period      = 60
+
+  evaluation_periods  = 1
+  threshold           = 0
+  comparison_operator = "GreaterThanThreshold"
+  treat_missing_data  = "notBreaching"
+
+  dimensions = {
+    FunctionName = aws_lambda_function.threat_detector.function_name
+  }
+
+  alarm_actions = [
+    aws_sns_topic.security_alerts.arn
+  ]
+
+  tags = local.common_tags
+}
