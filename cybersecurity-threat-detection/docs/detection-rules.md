@@ -23,5 +23,19 @@ Repeated login failures from one source in a short period may indicate automated
 
 - Create a high-severity security finding.
 - Send an alert through Amazon SNS.
-- Store the original event for investigation.
+- Log the original event in CloudWatch and include it in the SNS alert.
 - Do not automatically block the source in the first version.
+
+## Testing evidence
+
+### Brute-force detection alert
+
+The following redacted notification confirms that a simulated failed-login event was classified as brute-force activity and delivered through Amazon SNS.
+
+![Brute-force alert email](evidence/brute-force-alert-redacted.png)
+
+### CloudWatch operational alarm
+
+The following redacted notification confirms that the Lambda error alarm successfully entered the `ALARM` state and delivered a notification.
+
+![CloudWatch Lambda error alarm](evidence/cloudwatch-error-alarm-redacted.png)
