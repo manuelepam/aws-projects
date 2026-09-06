@@ -28,3 +28,15 @@ def test_metrics_returns_prometheus_format():
     assert response.status_code == 200
     assert response.content_type.startswith("text/plain")
     assert b"python_info" in response.data
+
+def test_turbines_returns_maintenance_information():
+    client = app.test_client()
+    response = client.get("/turbines")
+    data = response.get_json()
+
+    assert response.status_code == 200
+    assert data["count"] == 3
+    assert data["turbines"][1] == {
+        "id": "ZW-002",
+        "status": "maintenance_required",
+    }
