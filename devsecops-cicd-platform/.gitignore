@@ -16,6 +16,7 @@ crash.log
 # Security and test reports
 .scannerwork/
 coverage.xml
+.coverage
 
 # macOS
 .DS_Store
