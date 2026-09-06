@@ -1,4 +1,5 @@
-from flask import Flask, jsonify
+from flask import Flask, Response, jsonify
+from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
 app = Flask(__name__)
 
@@ -18,3 +19,8 @@ def index():
 @app.get("/health")
 def health():
     return jsonify({"status": "healthy"})
+
+
+@app.get("/metrics")
+def metrics():
+    return Response(generate_latest(), content_type=CONTENT_TYPE_LATEST)

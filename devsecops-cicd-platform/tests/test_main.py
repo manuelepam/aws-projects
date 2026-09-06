@@ -20,3 +20,11 @@ def test_health_returns_healthy_status():
 
     assert response.status_code == 200
     assert response.get_json() == {"status": "healthy"}
+
+def test_metrics_returns_prometheus_format():
+    client = app.test_client()
+    response = client.get("/metrics")
+
+    assert response.status_code == 200
+    assert response.content_type.startswith("text/plain")
+    assert b"python_info" in response.data
