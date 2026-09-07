@@ -28,6 +28,7 @@ def test_metrics_returns_prometheus_format():
     assert response.status_code == 200
     assert response.content_type.startswith("text/plain")
     assert b"python_info" in response.data
+    assert b"zephyrworks_turbines_requiring_maintenance 1.0" in response.data
 
 def test_turbines_returns_maintenance_information():
     client = app.test_client()

@@ -1,5 +1,5 @@
 from flask import Flask, Response, jsonify
-from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
+from prometheus_client import CONTENT_TYPE_LATEST, Gauge, generate_latest
 
 app = Flask(__name__)
 
@@ -9,6 +9,15 @@ TURBINES = [
     {"id": "ZW-002", "status": "maintenance_required"},
     {"id": "ZW-003", "status": "operational"},
 ]
+
+TURBINES_REQUIRING_MAINTENANCE = Gauge(
+    "zephyrworks_turbines_requiring_maintenance",
+    "Number of turbines currently requiring maintenance",
+)
+
+TURBINES_REQUIRING_MAINTENANCE.set(
+    sum(turbine["status"] == "maintenance_required" for turbine in TURBINES)
+)
 
 @app.get("/")
 def index():
