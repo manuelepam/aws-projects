@@ -7,7 +7,8 @@ WORKDIR /app
 
 COPY requirements.txt .
 
-RUN python -m pip install --no-cache-dir --requirement requirements.txt
+RUN python -m pip install --no-cache-dir --requirement requirements.txt \
+    && python -m pip uninstall --yes pip
 
 RUN addgroup --system app && adduser --system --ingroup app --home /home/app app
 
