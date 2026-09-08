@@ -9,6 +9,8 @@ pipeline {
     environment {
         PATH = "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:${env.PATH}"
         IMAGE_NAME = "zephyrworks-turbine-api"
+        AWS_REGION = "eu-west-2"
+        AWS_PROFILE = "zephyrworks-devsecops"
     }
 
     stages {
@@ -16,6 +18,8 @@ pipeline {
             steps {
                 sh 'python3 --version'
                 sh 'git --version'
+                sh 'aws --version'
+                sh 'aws sts get-caller-identity'
                 sh 'trivy --version'
             }
         }
@@ -74,6 +78,35 @@ pipeline {
                           --output trivy-report.json \
                           --exit-code 1 \
                           ${IMAGE_NAME}:${BUILD_NUMBER}
+                    '''
+                }
+            }
+        }
+        stage('Push image to ECR') {
+            steps {
+                dir('devsecops-cicd-platform') {
+                    sh '''
+                        AWS_ACCOUNT_ID=$(aws sts get-caller-identity \
+                          --query Account \
+                          --output text)
+
+                        ECR_REGISTRY="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+                        IMAGE_TAG="$(git rev-parse --short=7 HEAD)-${BUILD_NUMBER}"
+                        ECR_IMAGE="${ECR_REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}"
+
+                        aws ecr get-login-password \
+                         --region "${AWS_REGION}" \
+                        | docker login \
+                         --username AWS \
+                         --password-stdin "${ECR_REGISTRY}"
+
+                        docker tag \
+                          "${IMAGE_NAME}:${BUILD_NUMBER}" \
+                          "${ECR_IMAGE}"
+
+                        docker push "${ECR_IMAGE}"
+
+                        echo "Published image: ${ECR_IMAGE}"
                     '''
                 }
             }
