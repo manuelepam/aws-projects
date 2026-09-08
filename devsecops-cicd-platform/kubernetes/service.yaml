@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: turbine-api
+  namespace: zephyrworks
+  labels:
+    app: turbine-api
+spec:
+  type: ClusterIP
+  selector:
+    app: turbine-api
+  ports:
+    - name: http
+      protocol: TCP
+      port: 80
+      targetPort: http
