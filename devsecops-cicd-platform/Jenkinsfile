@@ -8,6 +8,7 @@ pipeline {
 
     environment {
         PATH = "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:${env.PATH}"
+        IMAGE_NAME = "zephyrworks-turbine-api"
     }
 
     stages {
@@ -42,7 +43,17 @@ pipeline {
                 }
             }
         }
+        stage('Build container') {
+            steps {
+                dir('devsecops-cicd-platform') {
+                   sh 'docker build --tag ${IMAGE_NAME}:${BUILD_NUMBER} .'
+                   sh 'docker run --rm ${IMAGE_NAME}:${BUILD_NUMBER} id'
+                }
+            }
+        }
     }
+
+
 
     post {
         always {
