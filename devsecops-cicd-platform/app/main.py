@@ -26,7 +26,7 @@ def index():
             "company": "ZephyrWorks Energy",
             "service": "Turbine Maintenance API",
             "status": "operational",
-            "version": "1.0.0",
+            "version": "1.0.1",
         }
     )
 

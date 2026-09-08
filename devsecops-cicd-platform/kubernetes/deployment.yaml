@@ -29,7 +29,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: turbine-api
-          image: zephyrworks-turbine-api:1.0.0
+          image: zephyrworks-turbine-api:1.0.1
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
