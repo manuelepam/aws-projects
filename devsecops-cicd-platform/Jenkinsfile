@@ -28,6 +28,14 @@ pipeline {
             }
         }
 
+        stage('Dependency audit') {
+            steps {
+                dir('devsecops-cicd-platform') {
+                    sh '.venv/bin/python -m pip_audit --requirement requirements.txt'
+                }
+            }
+        }
+
         stage('Lint') {
             steps {
                 dir('devsecops-cicd-platform') {
@@ -48,13 +56,6 @@ pipeline {
                 dir('devsecops-cicd-platform') {
                    sh 'docker build --tag ${IMAGE_NAME}:${BUILD_NUMBER} .'
                    sh 'docker run --rm ${IMAGE_NAME}:${BUILD_NUMBER} id'
-                }
-            }
-        }
-        stage('Dependency audit') {
-            steps {
-                dir('devsecops-cicd-platform') {
-                    sh '.venv/bin/python -m pip_audit --requirement requirements.txt'
                 }
             }
         }
