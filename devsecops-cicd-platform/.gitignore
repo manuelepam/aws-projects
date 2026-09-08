@@ -12,6 +12,8 @@ __pycache__/
 *.tfvars
 !*.tfvars.example
 crash.log
+tfplan
+*.tfplan
 
 # Security and test reports
 .scannerwork/
