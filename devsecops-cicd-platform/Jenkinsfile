@@ -51,6 +51,13 @@ pipeline {
                 }
             }
         }
+        stage('Dependency audit') {
+            steps {
+                dir('devsecops-cicd-platform') {
+                    sh '.venv/bin/python -m pip_audit --requirement requirements.txt'
+                }
+            }
+        }
     }
 
 
