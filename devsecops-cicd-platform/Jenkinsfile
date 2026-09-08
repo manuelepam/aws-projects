@@ -1,0 +1,55 @@
+pipeline {
+    agent any
+
+    options {
+        timestamps()
+        disableConcurrentBuilds()
+    }
+
+    environment {
+        PATH = "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:${env.PATH}"
+    }
+
+    stages {
+        stage('Verify toolchain') {
+            steps {
+                sh 'python3 --version'
+                sh 'git --version'
+            }
+        }
+
+        stage('Install dependencies') {
+            steps {
+                dir('devsecops-cicd-platform') {
+                    sh 'python3 -m venv --clear .venv'
+                    sh '.venv/bin/python -m pip install --requirement requirements-dev.txt'
+                }
+            }
+        }
+
+        stage('Lint') {
+            steps {
+                dir('devsecops-cicd-platform') {
+                    sh '.venv/bin/python -m ruff check app tests'
+                }
+            }
+        }
+
+        stage('Test') {
+            steps {
+                dir('devsecops-cicd-platform') {
+                    sh '.venv/bin/python -m pytest --junitxml=test-results.xml'
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            junit allowEmptyResults: true,
+                testResults: 'devsecops-cicd-platform/test-results.xml'
+            archiveArtifacts allowEmptyArchive: true,
+                artifacts: 'devsecops-cicd-platform/coverage.xml'
+        }
+    }
+}
