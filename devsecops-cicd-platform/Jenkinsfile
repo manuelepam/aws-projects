@@ -16,6 +16,7 @@ pipeline {
             steps {
                 sh 'python3 --version'
                 sh 'git --version'
+                sh 'trivy --version'
             }
         }
 
@@ -59,6 +60,24 @@ pipeline {
                 }
             }
         }
+
+        stage('Container vulnerability scan') {
+            steps {
+                dir('devsecops-cicd-platform') {
+                    sh '''
+                        trivy image \
+                          --scanners vuln \
+                          --sbom-sources "" \
+                          --ignore-unfixed \
+                          --severity HIGH,CRITICAL \
+                          --format json \
+                          --output trivy-report.json \
+                          --exit-code 1 \
+                          ${IMAGE_NAME}:${BUILD_NUMBER}
+                    '''
+                }
+            }
+        }
     }
 
 
@@ -69,6 +88,8 @@ pipeline {
                 testResults: 'devsecops-cicd-platform/test-results.xml'
             archiveArtifacts allowEmptyArchive: true,
                 artifacts: 'devsecops-cicd-platform/coverage.xml'
+            archiveArtifacts allowEmptyArchive: true,
+                artifacts: 'devsecops-cicd-platform/trivy-report.json'
         }
     }
 }
