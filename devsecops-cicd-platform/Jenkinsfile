@@ -156,9 +156,21 @@ pipeline {
                           turbine-api="${ECR_IMAGE}" \
                           --namespace zephyrworks
 
-                        kubectl rollout status deployment/turbine-api \
+                        if ! kubectl rollout status deployment/turbine-api \
                           --namespace zephyrworks \
                           --timeout=120s
+                        then
+                            echo "Deployment failed; rolling back to the previous revision"
+
+                            kubectl rollout undo deployment/turbine-api \
+                              --namespace zephyrworks
+
+                            kubectl rollout status deployment/turbine-api \
+                              --namespace zephyrworks \
+                              --timeout=120s
+
+                            exit 1
+                        fi
 
                         DEPLOYED_IMAGE=$(kubectl get deployment turbine-api \
                           --namespace zephyrworks \
