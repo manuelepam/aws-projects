@@ -135,6 +135,41 @@ pipeline {
                 }
             }
         }
+        stage('Deploy to Kubernetes') {
+            steps {
+                dir('devsecops-cicd-platform') {
+                    sh '''
+                        AWS_ACCOUNT_ID=$(aws sts get-caller-identity \
+                          --query Account \
+                          --output text)
+
+                        ECR_REGISTRY="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+                        IMAGE_TAG="$(git rev-parse --short=7 HEAD)-${BUILD_NUMBER}"
+                        ECR_IMAGE="${ECR_REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}"
+
+                        kubectl annotate deployment/turbine-api \
+                          --namespace zephyrworks \
+                          kubernetes.io/change-cause="Deploy ${IMAGE_TAG} from Jenkins build ${BUILD_NUMBER}" \
+                          --overwrite
+
+                        kubectl set image deployment/turbine-api \
+                          turbine-api="${ECR_IMAGE}" \
+                          --namespace zephyrworks
+
+                        kubectl rollout status deployment/turbine-api \
+                          --namespace zephyrworks \
+                          --timeout=120s
+
+                        DEPLOYED_IMAGE=$(kubectl get deployment turbine-api \
+                          --namespace zephyrworks \
+                          --output jsonpath='{.spec.template.spec.containers[0].image}')
+
+                        test "${DEPLOYED_IMAGE}" = "${ECR_IMAGE}"
+                        echo "Successfully deployed: ${DEPLOYED_IMAGE}"
+                    '''
+                }
+            }
+        }
     }
 
 
