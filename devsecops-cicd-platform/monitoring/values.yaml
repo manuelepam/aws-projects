@@ -1,0 +1,9 @@
+grafana:
+  persistence:
+    enabled: false
+
+nodeExporter:
+  enabled: false
+
+alertmanager:
+  enabled: false
