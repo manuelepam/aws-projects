@@ -7,6 +7,7 @@ pipeline {
     }
 
     environment {
+        JAVA_HOME = "/opt/homebrew/opt/openjdk@21"
         PATH = "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:${env.PATH}"
         IMAGE_NAME = "zephyrworks-turbine-api"
         AWS_REGION = "eu-west-2"
