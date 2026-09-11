@@ -79,6 +79,20 @@ pipeline {
             }
         }
 
+        stage('SonarQube analysis') {
+            steps {
+                dir('devsecops-cicd-platform') {
+                    script {
+                        def scannerHome = tool 'SonarQube Scanner'
+
+                        withSonarQubeEnv('SonarQube Local') {
+                            sh "${scannerHome}/bin/sonar-scanner"
+                        }
+                    }
+                }
+            }
+        }
+
         stage('Build container') {
             steps {
                 dir('devsecops-cicd-platform') {
