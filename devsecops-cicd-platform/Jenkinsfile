@@ -12,6 +12,8 @@ pipeline {
         IMAGE_NAME = "zephyrworks-turbine-api"
         AWS_REGION = "eu-west-2"
         AWS_PROFILE = "zephyrworks-devsecops"
+        NEXUS_URL = "http://127.0.0.1:8081"
+        NEXUS_REPOSITORY = "zephyrworks-builds"
     }
 
     stages {
@@ -158,6 +160,58 @@ pipeline {
                 }
             }
         }
+
+        stage('Publish build artefacts to Nexus') {
+            steps {
+                dir('devsecops-cicd-platform') {
+                    withCredentials([
+                        usernamePassword(
+                            credentialsId: 'nexus-credentials',
+                            usernameVariable: 'NEXUS_USER',
+                            passwordVariable: 'NEXUS_PASSWORD'
+                        )
+                    ]) {
+                        sh '''
+                            AWS_ACCOUNT_ID=$(aws sts get-caller-identity \
+                              --query Account \
+                              --output text)
+
+                            GIT_COMMIT_FULL=$(git rev-parse HEAD)
+                            GIT_COMMIT_SHORT=$(git rev-parse --short=7 HEAD)
+                            IMAGE_TAG="${GIT_COMMIT_SHORT}-${BUILD_NUMBER}"
+                            ECR_IMAGE="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${IMAGE_NAME}:${IMAGE_TAG}"
+                            BUNDLE_NAME="${IMAGE_NAME}-${IMAGE_TAG}.tar.gz"
+
+                            printf '{\\n  "build_number": "%s",\\n  "git_commit": "%s",\\n  "image": "%s",\\n  "jenkins_url": "%s"\\n}\\n' \
+                              "${BUILD_NUMBER}" \
+                              "${GIT_COMMIT_FULL}" \
+                              "${ECR_IMAGE}" \
+                              "${BUILD_URL}" \
+                              > build-metadata.json
+
+                            tar -czf "${BUNDLE_NAME}" \
+                              build-metadata.json \
+                              coverage.xml \
+                              test-results.xml \
+                              trivy-report.json \
+                              trivy-terraform-report.json \
+                              trivy-kubernetes-report.json
+
+                            curl \
+                              --fail-with-body \
+                              --silent \
+                              --show-error \
+                              --user "${NEXUS_USER}:${NEXUS_PASSWORD}" \
+                              --upload-file "${BUNDLE_NAME}" \
+                              "${NEXUS_URL}/repository/${NEXUS_REPOSITORY}/turbine-api/${GIT_COMMIT_SHORT}/${BUILD_NUMBER}/${BUNDLE_NAME}"
+
+                            echo "Published Nexus artefact: ${BUNDLE_NAME}"
+                        '''
+                    }
+                }
+            }
+        }
+
         stage('Deploy to Kubernetes') {
             steps {
                 dir('devsecops-cicd-platform') {
@@ -219,6 +273,8 @@ pipeline {
                 artifacts: 'devsecops-cicd-platform/trivy-report.json'
             archiveArtifacts allowEmptyArchive: true,
                 artifacts: 'devsecops-cicd-platform/trivy-*-report.json'
+            archiveArtifacts allowEmptyArchive: true,
+                artifacts: 'devsecops-cicd-platform/*.tar.gz'
         }
     }
 }
