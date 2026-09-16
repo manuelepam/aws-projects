@@ -107,7 +107,7 @@ pipeline {
         stage('Build container') {
             steps {
                 dir('devsecops-cicd-platform') {
-                   sh 'docker build --tag ${IMAGE_NAME}:${BUILD_NUMBER} .'
+                   sh 'docker build --pull --no-cache --tag ${IMAGE_NAME}:${BUILD_NUMBER} .'
                    sh 'docker run --rm ${IMAGE_NAME}:${BUILD_NUMBER} id'
                 }
             }

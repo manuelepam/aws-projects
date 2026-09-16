@@ -5,6 +5,10 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
+RUN apt-get update \
+    && apt-get upgrade --yes \
+    && rm -rf /var/lib/apt/lists/*
+
 COPY requirements.txt .
 
 RUN python -m pip install --no-cache-dir --requirement requirements.txt \
