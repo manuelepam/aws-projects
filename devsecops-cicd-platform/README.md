@@ -33,3 +33,40 @@ This project creates an automated DevSecOps platform that validates every change
 - Display application, platform, and business metrics in Grafana.
 - Reproduce and safely remove the AWS infrastructure using Terraform.
 
+## Architecture
+
+```mermaid
+flowchart LR
+    GitHub[GitHub] --> Jenkins[Jenkins Pipeline]
+    Jenkins --> Tests[Tests and Coverage]
+    Jenkins --> SonarQube[SonarQube Quality Gate]
+    Jenkins --> Trivy[Security Scans]
+    Jenkins --> ECR[AWS ECR]
+    Jenkins --> Nexus[Nexus Artefact Repository]
+    ECR --> Kubernetes[Kubernetes Deployment]
+    Kubernetes --> Prometheus[Prometheus]
+    Prometheus --> Grafana[Grafana Dashboards]
+```
+
+## Deployment Safety
+
+
+The pipeline blocks deployment when tests, the SonarQube quality gate, dependency auditing, infrastructure scanning, or container vulnerability scanning fails.
+
+Container images use immutable tags containing the short Git commit and Jenkins build number. Build reports and metadata are bundled and uploaded to Nexus, providing traceability from source commit to deployed image.
+
+Kubernetes performs rolling deployments across two replicas. If a rollout fails, Jenkins automatically restores the previous deployment revision and verifies that the original image is running.
+
+
+## Evidence
+
+### Nexus artefact traceability
+![Build artefact stored in Nexus](docs/screenshots/nexus-build-artifact.png)
+
+The Nexus bundle contains build metadata, test results, coverage and security reports. It is uploaded using a dedicated least-privilege Jenkins account.
+
+### Automatic rollback
+![Jenkins automatic rollback](docs/screenshots/jenkins-automatic-rollback.png)
+
+A controlled test deploys a deliberately missing image. Kubernetes rejects the rollout, Jenkins restores the previous image, verifies the rollback and reports the test build as failed.
+
