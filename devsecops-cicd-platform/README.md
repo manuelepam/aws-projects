@@ -70,3 +70,76 @@ The Nexus bundle contains build metadata, test results, coverage and security re
 
 A controlled test deploys a deliberately missing image. Kubernetes rejects the rollout, Jenkins restores the previous image, verifies the rollback and reports the test build as failed.
 
+
+### Monitoring dashboard
+
+![Grafana monitoring dashboard](docs/images/grafana-dashboard.png)
+
+Prometheus collects application and Kubernetes metrics. Grafana visualises API traffic, latency, health and infrastructure status.
+
+## CI/CD Pipeline
+
+Every detected change to the `main` branch runs the following stages:
+
+1. Verify the build toolchain
+2. Install and audit Python dependencies
+3. Scan Terraform and Kubernetes configuration
+4. Lint and test the application with a 90% coverage gate
+5. Run SonarQube analysis and enforce the quality gate
+6. Build and scan the non-root container image
+7. Push an immutable image to Amazon ECR
+8. Publish build evidence to Nexus
+9. Deploy to Kubernetes and verify the rollout
+10. Restore the previous image automatically if deployment fails
+
+Jenkins polls the repository every five minutes using:
+
+```text
+H/5 * * * *
+```
+
+## Technology Stack
+
+- Python, Flask and Gunicorn
+- Pytest, Ruff and pip-audit
+- Docker
+- Terraform and Amazon ECR
+- Kubernetes
+- Jenkins
+- SonarQube
+- Trivy
+- Sonatype Nexus
+- Prometheus and Grafana
+
+## Controlled Rollback Test
+
+The Jenkins job includes a TEST_ROLLBACK Boolean parameter. When enabled, the pipeline deliberately attempts to deploy a missing image. The expected result is a failed Jenkins build after the pipeline has restored and verified the previously running image.
+Leave this parameter disabled for normal deployments.
+
+## Local Verification
+
+```bash
+python3 -m venv .venv
+.venv/bin/python -m pip install --requirement requirements-dev.txt
+.venv/bin/python -m ruff check app tests
+.venv/bin/python -m pytest
+terraform -chdir=infrastructure fmt -check
+terraform -chdir=infrastructure validate
+```
+
+## Application Health
+With the Kubernetes service forwarded locally:
+
+```bash
+kubectl port-forward service/turbine-api --namespace zephyrworks 8001:80
+curl http://127.0.0.1:8001/health
+```
+
+Expected response:
+
+```json
+{"status":"healthy"}
+```
+
+## Project Status
+The end-to-end workflow is operational: source changes trigger Jenkins automatically, security and quality gates are enforced, artefacts are traceable, immutable images are deployed to Kubernetes, monitoring is available, and failed rollouts restore the previous image.
