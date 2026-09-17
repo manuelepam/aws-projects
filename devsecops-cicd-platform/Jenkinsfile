@@ -259,7 +259,8 @@ pipeline {
                         then
                             echo "Deployment failed; rolling back to the previous revision"
 
-                            kubectl rollout undo deployment/turbine-api \
+                            kubectl set image deployment/turbine-api \
+                              turbine-api="${PREVIOUS_IMAGE}" \
                               --namespace zephyrworks
 
                             kubectl rollout status deployment/turbine-api \
