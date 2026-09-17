@@ -6,6 +6,14 @@ pipeline {
         disableConcurrentBuilds()
     }
 
+    parameters {
+        booleanParam(
+            name: 'TEST_ROLLBACK',
+            defaultValue: false,
+            description: 'Deliberately deploy a missing image to verify automatic rollback'
+        )
+    }
+
     environment {
         JAVA_HOME = "/opt/homebrew/opt/openjdk@21"
         PATH = "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:${env.PATH}"
@@ -224,13 +232,25 @@ pipeline {
                         IMAGE_TAG="$(git rev-parse --short=7 HEAD)-${BUILD_NUMBER}"
                         ECR_IMAGE="${ECR_REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}"
 
+                        PREVIOUS_IMAGE=$(kubectl get deployment turbine-api \
+                          --namespace zephyrworks \
+                          --output jsonpath='{.spec.template.spec.containers[0].image}')
+
+                        DEPLOY_IMAGE="${ECR_IMAGE}"
+
+                        if [ "${TEST_ROLLBACK}" = "true" ]
+                        then
+                            DEPLOY_IMAGE="${ECR_REGISTRY}/${IMAGE_NAME}:rollback-test-missing-${BUILD_NUMBER}"
+                            echo "Rollback test enabled; attempting deployment with: ${DEPLOY_IMAGE}"
+                        fi
+
                         kubectl annotate deployment/turbine-api \
                           --namespace zephyrworks \
                           kubernetes.io/change-cause="Deploy ${IMAGE_TAG} from Jenkins build ${BUILD_NUMBER}" \
                           --overwrite
 
                         kubectl set image deployment/turbine-api \
-                          turbine-api="${ECR_IMAGE}" \
+                          turbine-api="${DEPLOY_IMAGE}" \
                           --namespace zephyrworks
 
                         if ! kubectl rollout status deployment/turbine-api \
@@ -245,6 +265,13 @@ pipeline {
                             kubectl rollout status deployment/turbine-api \
                               --namespace zephyrworks \
                               --timeout=120s
+
+                            ROLLED_BACK_IMAGE=$(kubectl get deployment turbine-api \
+                              --namespace zephyrworks \
+                              --output jsonpath='{.spec.template.spec.containers[0].image}')
+
+                            test "${ROLLED_BACK_IMAGE}" = "${PREVIOUS_IMAGE}"
+                            echo "Rollback successful: ${ROLLED_BACK_IMAGE}"
 
                             exit 1
                         fi
